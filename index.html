@@ -3389,7 +3389,7 @@ function D_calc(){
   // 印刷ショット数 = ceil(枚数 ÷ 印刷列数)  ← 面付け連動
   const printShots = Math.ceil(qty / printCols);
   // m数は印刷ショット数で計算
-  const realM  = (H/1000) * printShots;
+  const realM  = ((H+3)/1000) * printShots;
   const calcM  = realM + D_LOSS;
   const orderM = Math.ceil(calcM/D_OM)*D_OM;
 
@@ -3509,7 +3509,7 @@ function D_calc(){
     {l:'印刷列数',             f:`${chosen.slits}スリット×${chosen.men}面`,        v:`${printCols}列　余り${printRem}mm`},
     {l:'印刷ショット',         f:`ceil(${qty}÷${printCols}列)`,                   v:`${printShots}shot`},
     {l:'抜きショット',         f:`ceil(${qty}÷${chosen.men}面付け)`,              v:`${chosen.shots}shot`},
-    {l:'実使用m（印刷）',      f:`${H}mm÷1000×${printShots}shot`,                v:`${realM.toFixed(2)}m → 計算用${calcM.toFixed(2)}m`},
+    {l:'実使用m（印刷）',      f:`(${H}+3)mm÷1000×${printShots}shot`,                v:`${realM.toFixed(2)}m → 計算用${calcM.toFixed(2)}m`},
     {l:'紙発注m',              f:`ceil(${calcM.toFixed(1)}÷100)×100`,             v:`${orderM}m`},
     {l:'紙代',                 f:`0.3m×${orderM}m=${paperM2.toFixed(1)}m²×${matP}円×1.2`, v:D_yen(paperCost)},
     ...(lamiP>0?[{
@@ -3620,7 +3620,7 @@ function D_calcLotResult(qty){
   const printCols=slits*men;
   const printShots=Math.ceil(qty/printCols);
   const dieShots=Math.ceil(qty/men);
-  const realM=(H/1000)*printShots;
+  const realM=((H+3)/1000)*printShots;
   const calcM=realM+D_LOSS;
   const orderM=Math.ceil(calcM/D_OM)*D_OM;
 
