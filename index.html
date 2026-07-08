@@ -1096,6 +1096,9 @@ input[type=range]{
       <label>品名・案件名（任意・履歴で見分けやすくなります）</label>
       <input type="text" id="quote-title" placeholder="例：〇〇商事様 ラベルA" maxlength="60">
     </div>
+    <div class="fg"><label>担当者</label>
+      <div class="sw"><select id="d-staff"><option value="">-- 担当者を選択 --</option><option>城篤史</option><option>田中</option><option>渡辺</option><option>須藤</option><option>城剛仁</option></select></div>
+    </div>
     <div class="g2">
       <div class="fg"><label>横幅 W (mm)</label><input type="number" id="d-W" placeholder="例: 50" min="5" max="280" oninput="D_calc()"></div>
       <div class="fg"><label>縦幅 H (mm) 送り方向</label><input type="number" id="d-H" placeholder="例: 80" min="5" max="500" oninput="D_calc()"></div>
@@ -1315,6 +1318,12 @@ input[type=range]{
       </div>
     </div>
     <div class="fg"><label>素材単価 直接入力（円/m²）※入力で選択値を上書き</label><input type="number" id="mat-custom" placeholder="例：96" min="0" oninput="D_calc()"></div>
+    <div class="fg">
+      <label>ラミネート メーカー</label>
+      <div class="sw"><select id="d-lami-maker" onchange="D_onLamiMakerChange()">
+        <option value="">-- 選択(なし可) --</option><option>マルウ接着</option><option>東京タック</option><option>東日本加工紙</option>
+      </select></div>
+    </div>
     <div class="fg">
       <label>ラミネート</label>
       <div class="sw">
@@ -1591,7 +1600,7 @@ input[type=range]{
   </div>
 
   <div class="btn-area">
-    <button class="btn-print" onclick="D_saveCurrentToHistory() && alert('履歴に保存しました');" style="background:#fffacc;">💾 この見積もりを履歴に保存</button>
+    <button class="btn-print" onclick="if(D_saveCurrentToHistory()){const row=D_buildSheetRow();if(row)sendToSheet(row);alert('履歴に保存しました');}" style="background:#fffacc;">💾 この見積もりを履歴に保存</button>
     <button class="btn-print" onclick="D_openSubmissionPrompt()" style="background:#d4f4dd;">📜 提出用見積書を作成</button>
     <button class="btn-print" onclick="D_openQuoteWindow()">📄 見積もり結果を別窓で表示</button>
     <button class="btn-print" onclick="window.print()">🖨 見積もりを印刷</button>
@@ -1619,6 +1628,9 @@ input[type=range]{
     <div class="fg">
       <label>品名・案件名（任意）</label>
       <input type="text" id="hinmei" placeholder="例：○○商様 ラベルA" maxlength="60">
+    </div>
+    <div class="fg"><label>担当者</label>
+      <div class="sw"><select id="t-staff"><option value="">-- 担当者を選択 --</option><option>城篤史</option><option>田中</option><option>渡辺</option><option>須藤</option><option>城剛仁</option></select></div>
     </div>
     <div class="g4">
       <div class="fg"><label>仕上がり幅 W (mm)</label><input type="number" id="W" placeholder="例: 80" oninput="calc()"></div>
@@ -1721,6 +1733,12 @@ input[type=range]{
       </select></div>
     </div>
     <div class="fg"><label>素材単価 直接入力（円/m²）※入力で選択値を上書き</label><input type="number" id="paper_manual" placeholder="例: 96" oninput="calc()"></div>
+    <div class="fg">
+      <label>ラミネート メーカー</label>
+      <div class="sw"><select id="lami_maker" onchange="onLamiMakerChange()">
+        <option value="">-- 選択(なし可) --</option><option>マルウ接着</option><option>東京タック</option><option>東日本加工紙</option>
+      </select></div>
+    </div>
     <div class="fg">
       <label>ラミネート（幅は基材より5mm狭く取る・同量）</label>
       <div class="sw"><select id="lami_select" onchange="syncCustom('lami_select','lami_manual');calc()">
@@ -1986,112 +2004,23 @@ input[type=range]{
 
 // ========== マスタ ==========
 const PAPER_MASTER=[
-  {maker:"マルウ接着",g:"YUPO・ユポサーマル",items:[
-    {name:"YUPO#80 普通糊 キセパ",p:185},{name:"YUPO#80 普通糊 G S",p:185},
-    {name:"YUPO#80 冷食用 キセパ",p:211},{name:"YUPO#80 冷食用 G S",p:211},
-    {name:"YUPO#80 水溶強粘 キセパ",p:211},{name:"YUPO#80 水溶強粘 G S",p:211},
-    {name:"YUPO#80 溶強 G B 厚口 B",p:259},{name:"YUPO#80 溶強 G B G S",p:243},
-    {name:"YUPO#80 冷凍ハム用 G B",p:386},{name:"YUPO#80 冷凍ハム用 G S",p:317},
-    {name:"YUPO#80 SP-K 厚口白",p:297},{name:"YUPO#80 SP-K G S",p:271},
-    {name:"YUPO#80 Rt-K 白セパ",p:259},{name:"YUPO#80 Rt-K G S",p:259},
-    {name:"YUPO#80 RV-H 訂正用 厚口 B",p:375},
-    {name:"ユポサーマル 冷食用 G S",p:317},{name:"ユポサーマル 溶強 G B G S",p:271},
-    {name:"ユポサーマル 冷凍訂正 G S",p:407},{name:"ユポサーマル Rt-K 白セパ",p:271},
-    {name:"ユポ60# 溶剤強粘 G B",p:289},{name:"ユポ60# 冷食用 G S",p:317},
-    {name:"ユポ60# 冷凍ハム用 G S",p:317},{name:"ユポ60# 溶強 G B 厚口 B",p:311},
-    {name:"ユポ60# 溶強 G B G S",p:311},{name:"ユポ60# Rt-K 白セパ",p:297},
-    {name:"ユポコート90 溶強 G B P G S",p:329},
-  ]},
-  {maker:"マルウ接着",g:"PET（透明・白・マット）",items:[
-    {name:"PET#25 溶強 G B 厚口 B",p:259},{name:"PET#25 溶強 G B P G S",p:259},
-    {name:"PET#38 溶強 G B P G S",p:271},
-    {name:"PET#50 溶強 G B 厚口 B",p:284},{name:"PET#50 溶強 G B P G S",p:284},
-    {name:"PET#50 エマルジョン P G S",p:237},{name:"PET#50 エマルジョン P G S 冷食",p:211},
-    {name:"PET#50 冷凍ハム用 P G S",p:329},{name:"PET#50 クレー(白セパ)",p:336},
-    {name:"PET#100 溶強 G B 厚口 B",p:531},
-    {name:"PETマット#25 溶強 G B P G S",p:478},
-    {name:"PETマット#50 溶強 G B P G S",p:511},
-    {name:"白PET#50 溶強 G B 厚口 B",p:472},{name:"白PET#50 溶強 G B P G S",p:472},
-    {name:"発泡PET GR 溶強 G B 厚口白",p:329},{name:"発泡PET GR グラシンB",p:323},
-    {name:"印刷透明PP50 溶強 G B P G S",p:237},
-    {name:"印刷用白PP50 溶強 G B G S",p:237},{name:"印刷用白PP50 溶強 G B P G S",p:297},
-    {name:"印刷用能書PP50 溶強 G B G S",p:257},
-  ]},
-  {maker:"マルウ接着",g:"サテン・パール・特殊フィルム",items:[
-    {name:"サテン 繊維用 白セパ",p:857},
-    {name:"パールFホワイト 溶強 G B G S",p:472},
-    {name:"パールFグレー 溶強 G B G S",p:472},
-    {name:"パールFピンク 溶強 G B G S",p:472},
-    {name:"改ざん防止 溶強 G B P G S",p:622},
-  ]},
-  {maker:"マルウ接着",g:"金・銀・ホログラム",items:[
-    {name:"ツヤ金#25 溶強 G B 厚口 B",p:375},{name:"ツヤ金#25 溶強 G B P G S",p:375},
-    {name:"ツヤ金#50GR 溶強 G B 厚口 B",p:458},{name:"ツヤ金#50GR 溶強 G B P G S",p:458},
-    {name:"消金#25 溶強 G B 厚口 B",p:407},{name:"消金#25 溶強 G B P G S",p:407},
-    {name:"消金#50 溶強 G B 厚口 B",p:492},{name:"消金#50 溶強 G B P G S",p:492},
-    {name:"ツヤ銀#25 溶強 G B 厚口 B",p:323},{name:"ツヤ銀#25 溶強 G B P G S",p:323},
-    {name:"ツヤ銀#50GR 溶強 G B 厚口 B",p:388},{name:"ツヤ銀#50GR 溶強 G B P G S",p:389},
-    {name:"SM#25 溶強 G B 厚口 B",p:343},{name:"SM#25 溶強 G B P G S",p:343},
-    {name:"SM#50 溶強 G B 厚口 B",p:428},{name:"SM#50 溶強 G B P G S",p:427},
-    {name:"SM#100 溶強 G B 厚口 B",p:764},
-    {name:"白コート#25 溶強 G B 厚口 B",p:324},{name:"白コート#25 溶強 G B P G S",p:324},
-    {name:"白コート#50 溶強 G B 厚口 B",p:454},{name:"白コート#50 溶強 G B P G S",p:454},
-    {name:"白コート#100 溶強 G B 厚口 B",p:893},
-    {name:"STコート#50 溶強 G B P G S",p:608},
-    {name:"ホログラム HG-1(シームレス) 溶強 G B 厚口白",p:825},
-    {name:"ホログラム HG-2〜5 溶強 G B 厚口白",p:825},
-  ]},
-  {maker:"マルウ接着",g:"耐水和紙シリーズ",items:[
-    {name:"耐水和紙フィルム 溶強 G B G S",p:418},
-    {name:"耐水和紙HTユポ 溶強 G B G S",p:418},
-    {name:"耐水和紙ユポ雲竜 溶強 G B G S",p:418},
-    {name:"耐水和紙白 溶剤強粘 G S",p:431},
-    {name:"耐水和紙巻物 溶剤強粘 G S",p:431},
-    {name:"耐水和紙クレープ 溶剤強粘 G S",p:431},
-    {name:"耐水和紙無地 溶剤強粘 G S",p:431},
-    {name:"耐水和紙金 溶剤強粘 G S",p:431},
-    {name:"耐水和紙大礼 溶剤強粘 G S",p:431},
-    {name:"耐水和紙大きり 溶剤強粘 G S",p:431},
-    {name:"耐水和紙クラフト 溶剤強粘 G S",p:431},
-  ]},
-  {maker:"マルウ接着",g:"オレフィン・ボビック",items:[
-    {name:"ボビック白100 溶強 G B 厚口 B",p:414},{name:"ボビック白100 溶強 G B G S",p:414},
-    {name:"ボビック透明100 溶強 G B 厚口 B",p:414},{name:"ボビック透明100 溶強 G B P G S",p:414},
-  ]},
-  {maker:"マルウ接着",g:"上質タック",items:[
-    {name:"上質<55> 普通糊 キセパ",p:74},{name:"上質<55> 普通糊 G S",p:74},
-    {name:"上質<55> 冷食用 キセパ",p:89},{name:"上質<55> 水溶強粘 キセパ",p:89},
-    {name:"上質<55> トイシ用 G S",p:164},{name:"上質<55> SP-K キセパ",p:145},
-    {name:"上質<55> Rt-K 白セパ",p:111},{name:"上質<55> Rt-S 白セパ",p:175},
-    {name:"上質<55> 訂正用 キセパ",p:150},
-    {name:"上質<70> 普通糊 キセパ",p:102},{name:"上質<70> 冷食用 キセパ",p:116},
-    {name:"上質<70> 水溶強粘 G S",p:116},{name:"上質<70> トイシ用 G S",p:164},
-    {name:"上質<70> Rt-K 白セパ",p:118},{name:"上質<70> Rt-S G S",p:168},
-    {name:"上質<70> 訂正用 キセパ",p:145},
-    {name:"上質<90> トイシ用 G S",p:191},
-  ]},
-  {maker:"マルウ接着",g:"アートタック",items:[
-    {name:"アート<73> 普通糊 G S",p:96},{name:"アート<73> 普通糊 白セパ",p:124},
-    {name:"アート<73> 冷食用 キセパ",p:111},{name:"アート<73> 水溶強粘 G S",p:111},
-    {name:"アート<73> トイシ用 G S",p:172},{name:"アート<73> Rt-K 白セパ",p:124},
-    {name:"アート<73> Rt-S 白セパ",p:180},{name:"アート<73> 繊維用 白セパ",p:166},
-    {name:"アート<73> 溶強GB 白セパ",p:166},{name:"アート<73> 訂正用 G S",p:166},
-    {name:"アート90 水溶強粘 キセパ",p:179},{name:"アート110 水溶強粘 キセパ",p:268},
-  ]},
-  {maker:"マルウ接着",g:"スーパーキャスト",items:[
-    {name:"スーパーキャスト<73> 普通糊 G S",p:89},{name:"スーパーキャスト<73> 冷食用 G S",p:102},
-    {name:"スーパーキャスト<73> 水溶強粘 G S",p:102},{name:"スーパーキャスト<73> トイシ用 G S",p:176},
-    {name:"スーパーキャスト<73> Rt-K 白セパ",p:124},{name:"スーパーキャスト<73> Rt-S 白セパ",p:187},
-    {name:"スーパーキャスト<73> 冷凍ハム用 G S",p:179},{name:"スーパーキャスト<73> 溶強GB 白セパ",p:166},
-    {name:"スーパーキャスト<73> 訂正用 G S",p:166},
-  ]},
-  {maker:"マルウ接着",g:"マットコート・MAW",items:[
-    {name:"マットコート<70> 普通糊 キセパ",p:130},{name:"マットコート<70> 水溶強粘 キセパ",p:150},
-    {name:"マットコート<70> 訂正用 キセパ",p:201},
-    {name:"MAW80 普通糊 G S",p:159},{name:"MAW80 冷食用 G S",p:159},
-    {name:"MAW80 溶強GB G S",p:191},
-    {name:"MAW80 Rt-K G S",p:196},
-  ]},
+  {maker:"マルウ接着",g:"MAW80",items:[{name:"MAW80 普通糊 G S",p:173},{name:"MAW80 冷食用 キセパ",p:191},{name:"MAW80 冷食用 G S",p:191},{name:"MAW80 溶強GB G S",p:230},{name:"MAW80 Rt-K G S",p:236}]},
+  {maker:"マルウ接着",g:"上質55",items:[{name:"上質55 普通糊 キセパ",p:86},{name:"上質55 普通糊 G S",p:86},{name:"上質55 冷食用 キセパ",p:103},{name:"上質55 冷食用 G S",p:103},{name:"上質55 水溶強粘 キセパ",p:103},{name:"上質55 水溶強粘 G S",p:103},{name:"上質55 トイシ用 キセパ",p:173},{name:"上質55 トイシ用 G S",p:189},{name:"上質55 SP-K キセパ",p:167},{name:"上質55 SP-K G S",p:167},{name:"上質55 Rt-K 白セパ",p:128},{name:"上質55 Rt-K G S",p:128},{name:"上質55 Rt-S 白セパ",p:202},{name:"上質55 Rt-S G S",p:202},{name:"上質55 繊維用 白セパ",p:173},{name:"上質55 溶強GB 白セパ",p:173},{name:"上質55 訂正用 キセパ",p:173},{name:"三層タック上質55 普通糊/G S",p:364}]},
+  {maker:"マルウ接着",g:"上質70・90",items:[{name:"上質70 普通糊 キセパ",p:118},{name:"上質70 普通糊 G S",p:118},{name:"上質70 冷食用 キセパ",p:134},{name:"上質70 水溶強粘 キセパ",p:134},{name:"上質70 水溶強粘 G S",p:134},{name:"上質70 トイシ用 キセパ",p:173},{name:"上質70 トイシ用 G S",p:189},{name:"上質70 SP-K キセパ",p:173},{name:"上質70 Rt-K(弱粘再剥離) 白セパ",p:136},{name:"上質70 Rt-S 白セパ",p:194},{name:"上質70 Rt-S G S",p:194},{name:"上質70 訂正用 キセパ",p:167},{name:"上質90 トイシ用 キセパ",p:203},{name:"上質90 トイシ用 G S",p:220}]},
+  {maker:"マルウ接着",g:"アート73",items:[{name:"アート73 普通糊 キセパ",p:115},{name:"アート73 普通糊 G S",p:115},{name:"アート73 普通糊 白セパ",p:143},{name:"アート73 冷食用 キセパ",p:132},{name:"アート73 冷食用 G S",p:132},{name:"アート73 水溶強粘 キセパ",p:132},{name:"アート73 水溶強粘 G S",p:132},{name:"アート73 トイシ用 キセパ",p:184},{name:"アート73 トイシ用 G S",p:198},{name:"アート73 SP-K キセパ",p:182},{name:"アート73 SP-K G S",p:182},{name:"アート73 Rt-K 白セパ",p:143},{name:"アート73 Rt-K G S",p:143},{name:"アート73 Rt-S 白セパ",p:207},{name:"アート73 Rt-S G S",p:207},{name:"アート73 繊維用 白セパ",p:191},{name:"アート73 溶強GB 白セパ",p:191},{name:"アート73 訂正用 キセパ",p:173},{name:"アート73 訂正用 G S",p:191},{name:"三層タックアート73 普通糊/G S",p:382}]},
+  {maker:"マルウ接着",g:"マットコート・アート90/110/135",items:[{name:"マットコート70 普通糊 キセパ",p:150},{name:"マットコート70 普通糊 G S",p:150},{name:"マットコート70 水溶強粘 キセパ",p:173},{name:"マットコート70 訂正用 キセパ",p:232},{name:"アート90 水溶強粘 キセパ",p:206},{name:"アート110 水溶強粘 キセパ",p:309},{name:"アート135 水溶強粘 キセパ",p:213}]},
+  {maker:"マルウ接着",g:"スーパーキャスト73",items:[{name:"SキャスT73 普通糊 キセパ",p:103},{name:"SキャスT73 普通糊 G S",p:103},{name:"SキャスT73 普通糊 白セパ",p:143},{name:"SキャスT73 冷食用 キセパ",p:118},{name:"SキャスT73 冷食用 G S",p:118},{name:"SキャスT73 水溶強粘 キセパ",p:118},{name:"SキャスT73 水溶強粘 G S",p:118},{name:"SキャスT73 トイシ用 キセパ",p:189},{name:"SキャスT73 トイシ用 G S",p:203},{name:"SキャスT73 SP-K キセパ",p:191},{name:"SキャスT73 SP-K G S",p:191},{name:"SキャスT73 Rt-K 白セパ",p:143},{name:"SキャスT73 Rt-K G S",p:143},{name:"SキャスT73 Rt-S 白セパ",p:216},{name:"SキャスT73 Rt-S G S",p:216},{name:"SキャスT73 冷凍ハム用 G S",p:206},{name:"SキャスT73 繊維用 白セパ",p:191},{name:"SキャスT73 溶強GB 白セパ",p:191},{name:"SキャスT73 訂正用 キセパ",p:174},{name:"SキャスT73 訂正用 G S",p:191},{name:"SキャスT73 水洗糊 キセパ",p:222},{name:"SキャスT73 水洗糊 G S",p:222},{name:"三層タックキャスト73 普通糊/G S",p:382}]},
+  {maker:"マルウ接着",g:"和紙",items:[{name:"和紙 白・無地・きり 水溶強粘 キセパ",p:319},{name:"和紙 うすかみ(白セパのみ)",p:348},{name:"和紙 白・クレープ 水溶強粘 白GS",p:319},{name:"和紙 無地・クリーム 水溶強粘 白GS",p:348},{name:"和紙 きなり・きり 水溶強粘 白GS",p:348},{name:"和紙 金・コットン 水溶強粘 白GS",p:348},{name:"和紙 奉書・大礼 水溶強粘 白GS",p:348},{name:"和紙 金がすみ 水溶強粘 キセパ",p:501},{name:"和紙 銀がすみ 水溶強粘 キセパ",p:501},{name:"和紙 白/クレープ/きり/金/無地/コットン/うすかみ Rt-K(強粘再剥離) 白セパ",p:365},{name:"耐水和紙コットン 溶強GB G S",p:402},{name:"耐水紙 冷食用 G S",p:206}]},
+  {maker:"マルウ接着",g:"ホイル・金銀",items:[{name:"金 ツヤ・消 水溶強粘 キセパ",p:194},{name:"金 ツヤ・消 水溶強粘 G S",p:194},{name:"金 ツヤ・消 トイシ用 キセパ",p:326},{name:"銀 ツヤ・消 水溶強粘 キセパ",p:194},{name:"銀 ツヤ・消 水溶強粘 G S",p:194},{name:"銀 ツヤ・消 トイシ用 キセパ",p:326},{name:"銀 ツヤ・消 Rt-K(強粘再剥離)",p:326},{name:"金ピカ 水溶強粘 G S",p:463},{name:"銀ピカ 水溶強粘 G S",p:463},{name:"金箔 水溶強粘 G S",p:463},{name:"特色ホイル No.1〜3 水溶強粘 キセパ",p:304},{name:"特色ホイル No.4 水溶強粘 キセパ",p:304},{name:"特色ホイル No.1,3,4 水溶強粘 G S",p:333},{name:"特色ホイル No.14,15 水溶強粘 キセパ",p:304},{name:"ノンアルミ金 水溶強粘 キセパ",p:243},{name:"ノンアルミ銀 水溶強粘 キセパ",p:243},{name:"ノンアルミ金 水溶強粘 G S",p:288},{name:"ノンアルミ銀 水溶強粘 G S",p:288}]},
+  {maker:"マルウ接着",g:"特殊紙・色上質",items:[{name:"クラフト 普通糊 キセパ",p:173},{name:"クラフト 普通糊 G S",p:183},{name:"クラフト 水溶強粘 キセパ",p:197},{name:"オリンパス 普通糊 キセパ",p:183},{name:"オリンパス 普通糊 G S",p:183},{name:"色上質7色 Rt-S(弱粘再剥離) 白セパ",p:257},{name:"色上質9種 キセパ",p:189},{name:"色上質9種 G S(7種)",p:203},{name:"色上質白茶 普通糊 キセパ",p:189},{name:"色上質白茶 普通糊 G S",p:203},{name:"色上質アイボリー 普通糊 キセパ",p:189},{name:"色ミラ5種 普通糊 キセパ",p:243},{name:"色ミラ クロ 普通糊",p:319},{name:"パール紙ホワイト 水溶強粘 キセパ",p:304},{name:"パール紙ホワイト 水溶強粘 G S",p:304},{name:"パール紙グレー・ピンク 水溶強粘",p:304},{name:"ルミノ(蛍光紙)6色 水溶強粘 キセパ",p:577},{name:"トレーシング 水溶強粘 白セパ",p:319},{name:"トレーシング Rt-K 白セパ",p:382},{name:"模造紙 水溶強粘 キセパ",p:273}]},
+  {maker:"マルウ接着",g:"両面サンド・親農MS・印字",items:[{name:"両面サンド(上質55) 水溶強粘/水溶強粘 キセパ",p:348},{name:"PET両面サンドRt-H ラミ用/Rt-H 白GS/キセパ",p:824},{name:"PET50両面サンド 超トイシ/超トイシ キセパ/厚口白",p:995},{name:"ノンキャリア(芯材ナシ) 溶強GB 白GS/キセパ",p:348},{name:"MSシール 溶剤強粘 G S",p:386},{name:"MSシール 溶剤強粘 キセパ・1190巾取り",p:417},{name:"MSシール返信用 溶剤強粘 GS/GS",p:659},{name:"感熱用紙 普通糊 白GS",p:182},{name:"感熱用紙 Rt-K(強粘再剥離) 白GS",p:198},{name:"感熱用紙 冷食用 白GS",p:198},{name:"印字用紙 普通糊 白GS",p:134},{name:"印字用紙 普通糊 薄口白(1105)",p:237},{name:"印字用紙 Rt-K 白GS",p:167},{name:"印字用紙 Rt-K 薄口白(1050)",p:319},{name:"ノーカーボン50 普通糊 白GS",p:213},{name:"ノーカーボン80 普通糊 キセパ",p:213}]},
+  {maker:"マルウ接着",g:"リベールS(隠蔽再剥離)",items:[{name:"マットコート70 リベールS 白セパ",p:333},{name:"アート90 リベールS 白セパ",p:319},{name:"アート90 リベールS G S",p:333},{name:"スーパーキャスト73 リベールS 白セパ",p:333}]},
+  {maker:"マルウ接着",g:"YUPO・ユポサーマル",items:[{name:"YUPO#80 普通糊 キセパ",p:222},{name:"YUPO#80 普通糊 G S",p:222},{name:"YUPO#80 冷食用 キセパ",p:254},{name:"YUPO#80 冷食用 G S",p:254},{name:"YUPO#80 水溶強粘 キセパ",p:254},{name:"YUPO#80 水溶強粘 G S",p:254},{name:"YUPO#80 溶強GB 厚口B",p:311},{name:"YUPO#80 溶強GB G S",p:292},{name:"YUPO#80 冷凍ハム用 厚口B",p:464},{name:"YUPO#80 冷凍ハム用 G S",p:381},{name:"YUPO#80 SP-K 厚口白",p:357},{name:"YUPO#80 SP-K G S",p:326},{name:"YUPO#80 Rt-K 白セパ",p:311},{name:"YUPO#80 Rt-K G S",p:311},{name:"ユポサーマル 冷食用 G S",p:381},{name:"ユポサーマル 溶強GB G S",p:326},{name:"ユポサーマル 冷凍訂正 G S",p:489},{name:"ユポ60 Rt-K 白セパ",p:326},{name:"ユポ60 溶剤訂正 キセパ",p:357},{name:"ユポ60 溶剤訂正 G S",p:374},{name:"ユポ60 RV-H(訂正用再剥離) 厚口B",p:450},{name:"ユポ110 冷食用 G S",p:347},{name:"ユポ110 冷凍ハム用 G S",p:381},{name:"ユポ110 溶強GB 厚口B",p:374},{name:"ユポ110 溶強GB G S",p:374},{name:"ユポコート90 溶強GB P G S",p:395},{name:"エンビ 消エンビ#80 溶強GB",p:389},{name:"エンビ 消エンビ#100 溶強GB 厚口B",p:418},{name:"エンビ 透明エンビ#80 溶強GB 厚口B",p:412},{name:"色エンビ#100 溶強GB 厚口B",p:574}]},
+  {maker:"マルウ接着",g:"ホログラム・PET",items:[{name:"ホログラム HG-1(シームレス) 溶強GB 厚口白",p:990},{name:"ホログラム HG-2〜5 溶強GB 厚口白",p:990},{name:"PET#25 溶強GB 厚口B",p:318},{name:"PET#25 溶強GB P G S",p:318},{name:"PET#38 溶強GB P G S",p:237},{name:"PET#50 溶強GB 厚口B",p:326},{name:"PET#50 溶強GB P G S",p:350},{name:"PET#50 溶強GB 厚口B(341)",p:341},{name:"PET#50 エマルジョン 厚口B",p:285},{name:"PET#50 エマルジョン P G S",p:254},{name:"PET#50 冷食用 P G S",p:254},{name:"PET#50 冷凍ハム用 P G S",p:395},{name:"PET#50 クレー(白セパ)",p:404},{name:"PET#100 溶強GB 厚口B",p:638},{name:"PETマット#25 溶強GB 厚口B",p:574},{name:"PETマット#50 溶強GB 厚口B",p:614},{name:"白PET#50 溶強GB 厚口B",p:567},{name:"発泡PET GR 溶強GB 厚口B",p:395},{name:"発泡PET GR グラシンB",p:388},{name:"印刷用透明PP50 溶強GB P G S",p:285},{name:"印刷用白PP50 溶強GB G S",p:285},{name:"印刷用艶銀PP50 溶強GB G S",p:357},{name:"印刷用白PP50 1100mm G S",p:309},{name:"サテン 繊維用 白セパ",p:1029},{name:"パールFホワイト 溶強GB G S",p:567},{name:"パールFグレー 溶強GB G S",p:567},{name:"パールFピンク 溶強GB G S",p:567},{name:"改ざん防止 溶強GB P G S",p:747}]},
+  {maker:"マルウ接着",g:"金銀フィルム",items:[{name:"ツヤ金#25 溶強GB 厚口B",p:450},{name:"ツヤ金#25 溶強GB P G S",p:450},{name:"ツヤ金#50GR 溶強GB 厚口B",p:550},{name:"ツヤ金#50GR 溶強GB P G S",p:550},{name:"消金#25 溶強GB 厚口B",p:489},{name:"消金#25 溶強GB P G S",p:489},{name:"消金#50 溶強GB 厚口B",p:591},{name:"消金#50 溶強GB P G S",p:591},{name:"ツヤ銀#25 溶強GB 厚口B",p:388},{name:"ツヤ銀#25 溶強GB P G S",p:388},{name:"ツヤ銀#50/50GR 溶強GB 厚口B",p:466},{name:"ツヤ銀#50/50GR 溶強GB P G S",p:466},{name:"SM#25 溶強GB 厚口B",p:412},{name:"SM#25 溶強GB P G S",p:412},{name:"SM#50 溶強GB 厚口B",p:514},{name:"SM#50 溶強GB P G S",p:513},{name:"SM#100 溶強GB 厚口B",p:917},{name:"白コート#25 溶強GB 厚口B",p:389},{name:"白コート#25 溶強GB P G S",p:389},{name:"白コート#50 溶強GB 厚口B",p:545},{name:"白コート#50 溶強GB P G S",p:545},{name:"白コート#100 溶強GB 厚口B",p:1072}]},
+  {maker:"マルウ接着",g:"耐水和紙・オレフィン",items:[{name:"耐水和紙フィルム 溶強GB G S",p:581},{name:"耐水和紙HTユポ 溶強GB G S",p:502},{name:"耐水和紙ユポ雲竜 溶強GB G S",p:502},{name:"耐水和紙白 溶剤強粘 G S",p:518},{name:"耐水和紙奉書 溶剤強粘 G S",p:518},{name:"耐水和紙クレープ 溶剤強粘 G S",p:518},{name:"耐水和紙無地 溶剤強粘 G S",p:518},{name:"耐水和紙金 溶剤強粘 G S",p:518},{name:"耐水和紙大礼 溶剤強粘 G S",p:518},{name:"耐水和紙きり 溶剤強粘 G S",p:518},{name:"耐水クラフト 溶剤強粘 G S",p:518},{name:"ボビック白100 溶強GB 厚口B",p:497},{name:"ボビック白100 溶強GB G S",p:497},{name:"ボビック透明100 溶強GB 厚口B",p:497},{name:"ボビック透明100 溶強GB P G S",p:497}]},
+  {maker:"マルウ接着",g:"再剥離シリーズ",items:[{name:"発泡PET GR SP-H 厚口白",p:435},{name:"発泡PET GR SP-H P G S",p:435},{name:"PET#25 SP-H 厚口白",p:458},{name:"PET#50 SP-H 厚口白",p:458},{name:"PET#50 SP-H P G S",p:458},{name:"SM#50 SP-H 厚口白",p:600},{name:"ツヤ銀#50GR SP-H P G S",p:495},{name:"白コート#50 SP-H 厚口白",p:600},{name:"消エンビ#80 SP-H 厚口白",p:426},{name:"透明エンビ#80 SP-H 厚口白",p:426},{name:"YUPO#80 Rt-H 厚口B",p:435},{name:"YUPO#80 Rt-H G S",p:435},{name:"PET#25 Rt-H 厚口B",p:411},{name:"PET#50 Rt-H 厚口B",p:458},{name:"PET#50 Rt-H P G S",p:458},{name:"白PET#50 Rt-H 厚口B",p:633},{name:"SM#50 Rt-H 厚口B",p:600},{name:"ツヤ銀#50GR Rt-H 厚口B",p:572},{name:"消金#50 Rt-H 厚口B",p:663},{name:"白コート#50 Rt-H 厚口B",p:600},{name:"艶エンビ#80 Rt-H 厚口B",p:418},{name:"消エンビ#80 Rt-H 厚口B",p:418},{name:"透明エンビ#80 Rt-H 厚口B",p:418},{name:"ボビック白100 Rt-H 厚口B",p:502},{name:"ボビック透明100 Rt-H 厚口B",p:502},{name:"YUPO#80 RtBN 厚口白",p:435},{name:"PET#50 RtBN 厚口白",p:458},{name:"ツヤ銀#50GR RtBN 厚口白",p:572},{name:"消エンビ#80 RtBN 厚口白",p:449},{name:"透明エンビ#80 RtBN 厚口白",p:449},{name:"ボビック白100 RtBN 厚口B",p:502},{name:"発泡PET GR Rnon PET透明50セパ",p:712},{name:"発泡PET GR Rnon(50m) PET透明50セパ",p:776},{name:"PET#50 Rnon PET透明50セパ",p:712},{name:"PET#50 Rnon(50m) PET透明50セパ",p:776},{name:"PET#50 ファンシー 溶剤強粘",p:538},{name:"PET#50 ファンシー静防品 溶剤強粘",p:563}]},
+  {maker:"マルウ接着",g:"超トイシ・TA・環境配慮",items:[{name:"YUPO#80 超トイシ 厚口白",p:442},{name:"YUPO#80 超トイシ G S",p:442},{name:"PET#25 超トイシ 厚口白",p:411},{name:"PET#50 超トイシ 厚口白",p:442},{name:"PET#50 超トイシ P G S",p:442},{name:"白PET#50 超トイシ P G S",p:555},{name:"SM#25 超トイシ 厚口白",p:540},{name:"SM#50 超トイシ 厚口白",p:663},{name:"ツヤ銀#50GR 超トイシ 厚口白",p:572},{name:"白コート#25 超トイシ 厚口白",p:518},{name:"白コート#25W 超トイシ(白糊) P G S",p:549},{name:"白コート#50 超トイシ 厚口白",p:647},{name:"消エンビ#80 超トイシ 厚口白",p:510},{name:"透明エンビ#80 超トイシ 厚口白",p:526},{name:"サテン 超トイシ G S",p:1372},{name:"YUPO#80 TA強粘 厚口白",p:564},{name:"PET#50 TA強粘 厚口白",p:564},{name:"白コート#50 TA強粘 厚口白",p:764},{name:"SM#50 TA強粘 厚口白",p:764},{name:"消エンビ#100 TA強粘 厚口白",p:671},{name:"艶エンビ裏銀 TASP 厚口白",p:742},{name:"PET#50GR 溶強GB P G S",p:357},{name:"ツヤ銀#50GR 溶強GB P G S",p:479},{name:"ユポ#80GB 溶強GB G S",p:318},{name:"PET#16GR ラミ用 白GS",p:188},{name:"キルフィルム透明 グラシンB",p:306},{name:"キルフィルム銀 グラシンB",p:350},{name:"キルフィルム白 グラシンB",p:350},{name:"IJ用ユポ 溶強GB 厚口白",p:855},{name:"水性IJ Rt-H 厚口白",p:1011},{name:"レーザービーチ(LBA-1) 溶強GB PETセパ",p:846},{name:"レーザービーチ Rt-H PETセパ",p:932}]},
   {maker:"東京タック",g:"上質55",items:[{name:"上質55 一般 TWF55 P22 L8M",p:100},{name:"上質55 一般 青グラシン TWF55 P22 G7B",p:100},{name:"上質55 強粘 TWF55 S13 L8M",p:118},{name:"上質55 強粘 青グラシン TWF55 S13 G7B",p:118},{name:"上質55 冷凍 55 PC 8E",p:168},{name:"上質55 弱粘 青クラフト KWF55 F-60 L7B",p:145},{name:"上質55 繊維 55 MT 8E",p:265},{name:"上質55 粗面 55 ソメン 8R(N)",p:201},{name:"上質55 RP <55> RP",p:443}]},
   {maker:"東京タック",g:"上質70・90",items:[{name:"上質70 一般 キセパ TWF70 P22 U8C",p:140},{name:"上質70 強粘 キセパ TWF70 S13 U8C",p:197},{name:"上質70 粗面 70 ソメン",p:269},{name:"上質70 訂正 テイセイ<70> 8E",p:168},{name:"上質70 リピール 1710<70>",p:208},{name:"上質90 強粘 KWF90 S-26 L7T",p:232},{name:"上質55三層 55 3ソウ PW 7Kシロ PW 8K",p:361}]},
   {maker:"東京タック",g:"色上質・Nマット",items:[{name:"色上質7+1 強粘 イロ〜 S26 L7T",p:214},{name:"色上質7+1 強粘 濃クリーム 中厚",p:214},{name:"Nマット55 一般 キセパ Nマット55 P22 U8C",p:161},{name:"Nマット55 一般 白グラシン Nマット55 P22 G7W",p:161},{name:"Nマット70 一般 白グラシン Nマット70 P22 G7W",p:181},{name:"ホワイト訂正 ホワイトテイセイ",p:269}]},
@@ -2102,7 +2031,6 @@ const PAPER_MASTER=[
   {maker:"東京タック",g:"ヘアーライン",items:[{name:"HLSツヤ25 強粘 HLSツヤ25 PAT1 11BL",p:896},{name:"HLSツヤ50 強粘 HLSツヤ50 PAT1 11BL",p:913},{name:"HLSケシ25 強粘 HLSケシ25 PAT1 11BL",p:1019},{name:"HLSケシ50 強粘 HLSケシ50 PAT1 11BL",p:1040},{name:"HLSケシ200 強粘 青クラフト HLSケシ200WL PAT1 11LL",p:2112},{name:"HLGツヤ25 強粘 HLGツヤ25C PAT1 11BL",p:1165},{name:"HLGツヤ50 強粘 HLGツヤ50C PAT1 11BL",p:1255},{name:"ホログラスター2010",p:1092}]},
   {maker:"東京タック",g:"ユポ",items:[{name:"ユポ60訂正 テイセイユポ60UV P065D 11BL",p:402},{name:"ユポ60耐熱 KPY60T H BY",p:440},{name:"ユポ80 強粘 ユポ80(UV) PAT1 11BL",p:320},{name:"ユポ80 超強粘 Nユポ80 S3J YC11",p:353},{name:"ユポ80 強粘 青グラシン Nユポ80 S2J GB80",p:353},{name:"ユポ80 弱粘 ユポ80(UV) MF 11BL",p:496},{name:"ユポ80 強粘再剥離 ユポ80(UV) KV11 8E",p:319},{name:"ユポ80 粗面 KPY80 T ソメン",p:481},{name:"ユポ110 強粘 ユポ110(UV) PAT1 11BL",p:448}]},
   {maker:"東京タック",g:"塩ビ",items:[{name:"透明50 一般 PVC50Cコウシツ PLシン 11BY",p:456},{name:"透明80 強粘 PVC80C P 11Kシロ",p:424},{name:"透明100 一般 PVC100C P 11Kシロ",p:456},{name:"60白ケシ 強粘 V60Wケシン PAT1 11BL",p:449},{name:"80白ツヤ 強粘 V80WツヤN PAT1 11BL",p:456},{name:"80白ケシ 強粘 V80Wケシン PAT1 11BL",p:456},{name:"100白ツヤ 強粘 PVC100B P 11Kシロ",p:416},{name:"100白ケシ 強粘 PVC100M P 11Kシロ",p:416},{name:"黄 強粘 イロエンビイエロー L-400",p:683},{name:"赤 強粘 PVCアカ PAT1 11BL",p:683},{name:"黒 強粘 PVCクロ PAT1 11BL",p:683},{name:"青 強粘 PVCアオ PAT1 11BL",p:683},{name:"緑 強粘 PVCミドリ PAT1 11BL",p:683},{name:"エヌタック120透明 微粘 エヌタック120C 11LL",p:505},{name:"エヌタック120白 微粘 エヌタック120W 11LL",p:505},{name:"80白ツヤ弱粘 弱粘 PVC80B M 11Kシロ",p:437}]},
-  {maker:"東京タック",g:"ラミネート用",items:[{name:"PET16 一般 PET16 PLシン KG7W",p:161},{name:"PETSマット25 一般 PETSマット25 PLシン 8LKアオ",p:320},{name:"PETNマット25 一般 PETNマット25 PLシン 7LK",p:313},{name:"OPP20 一般 PP-20 PLシン 6SK",p:152},{name:"OPPマット25 一般 PPマット25N PLシン 6SK",p:274},{name:"フジクリア50 一般 フジクリア50 PLシン PET2501",p:461},{name:"PP40 一般 PP40 PLシン 6SK",p:234}]},
   {maker:"東京タック",g:"フィルムその他",items:[{name:"カイナス白 一般 KEP70WA P2041 8KA",p:592},{name:"刻印タック コクインタックSケシ BH",p:1165},{name:"カイフウ銀消し50 強粘 TEケシ50カイフウ・VOID PAT1 8LK",p:1016},{name:"カイフウ銀ツヤ50 強粘 TEツヤ50カイフウ・VOID PAT1 8LK",p:944},{name:"TP透明カイフウ 強粘 TPシールC(M) カイフウ",p:1109},{name:"PP40アプリ 弱粘 PP40 MA 8E",p:449},{name:"PETM25 強粘 PETマット25 溶溶GB 厚口B",p:773},{name:"PETM50 強粘 PETマット50 溶溶GB 厚口B",p:826},{name:"反射シート 強粘 シロ・キイロ914巾×1m",p:99000},{name:"ルミテープ8色 強粘 ルミノテープ200 蛍光塩ビ500mm×30m",p:43400},{name:"畜光テープ 強粘 ロイヒテープ200 500mm×30m",p:59400},{name:"パターンシート 糊無 表われカス上げ工賃別途",p:341},{name:"SK8801 強粘 改ざん防止青",p:2332},{name:"ハイブリット 一般 HBC25 L8A L7C",p:636},{name:"KSノンW 自己吸着 キセパ KSノンW",p:852},{name:"KSノンW 自己吸着 PET50 KSノンW PET50",p:968}]},
   {maker:"東京タック",g:"紙系その他・ホイル",items:[{name:"ホイル 強粘 金/金消/銀消 ホイルG・GM・SM S26 L7T",p:192},{name:"ホイル 銀ツヤ Sツヤ PZ-2 8R(N)",p:200},{name:"ホイル 強粘 青グラシン 銀ケシ Sケシ PZ-2 8K",p:281},{name:"ホイル 粗面 金/金消/銀/銀消 ソメン",p:331},{name:"白金消ホイル 強粘 ハクGケシ UV PZ-2 8E",p:281},{name:"白金消ホイル 青グラシン ハクGケシ UV PZ-2 8K",p:290},{name:"赤金ツヤホイル 強粘 トクアカGツヤ UV PZ-2 8E",p:281},{name:"サンドA 一般 55リョウメン PW 8E",p:265},{name:"サンドB 一般 両面タック 芯フィルム",p:827},{name:"#14WF 一般 両面タック 芯不織布 #14WF",p:738},{name:"TTディファレンシャル TTディファレンシャルテープ",p:990},{name:"サテン 一般 アセテートサテンWP PFC 8Eシロ",p:1582},{name:"和紙 一般 ワシ",p:354},{name:"雲竜 一般 ウンリュウ",p:354},{name:"不織布 一般 フショクフ PW 8E",p:614},{name:"クラフト白 一般 Sクラフト P-33 L7C",p:177},{name:"クラフト黒 一般 Uクラフト P-33 L7C",p:177},{name:"クレープ 一般 ウエーブ L",p:417},{name:"蛍光紙7色 強粘 (丸昌化学品)540×50m",p:806},{name:"イイタックロール 一般 イイタック(ロール)",p:450},{name:"耐水紙 冷凍 スイハク75G PC 8KA",p:0},{name:"アルミ単体 強粘 ヨシモリ051H〜056H",p:1387},{name:"セパレーター単体 SP-8Eアイボリー",p:164}]},
   {maker:"東京タック",g:"ヨシモリ品(取寄540×50m)",items:[{name:"特色ホイル55 一般 ヨシモリホイル #4〜#15",p:504},{name:"特色ホイル70 一般 ヨシモリホイル #2071〜#2078",p:756},{name:"特色ホイル90 一般 ヨシモリホイル #50911〜#50933",p:960},{name:"アート110K 一般 #A 110 PS",p:406},{name:"コートカード230g 一般 #185 PS",p:603},{name:"ミラーコート135K 一般",p:576},{name:"和風金銀紙 一般 #333金 #331銀",p:712},{name:"色上ギンネズ 一般 #700",p:378},{name:"色上質 一般 #710他",p:378},{name:"色ミラーコート 一般 #738・#740",p:443}]},
@@ -2124,7 +2052,6 @@ const PAPER_MASTER=[
   {maker:"東日本加工紙",g:"蒸着・金銀（常備品）",items:[{name:"FNSツヤ25 PA-T1 11BL 溶剤強粘/ホリラミ上質",p:410},{name:"FNSツヤ50 PA-T1 11BL 溶剤強粘/ホリラミ上質",p:456},{name:"PETS50 OP1 G7B 溶剤強粘/ブルーグラシン",p:454},{name:"PETSM25 OP1 L11C 溶剤強粘/ホリラミ上質",p:427},{name:"FNSケシS50 PAT1 11BL 溶剤強粘/ホリラミ上質",p:510},{name:"FNGツヤ25 PA-T1 11BL 溶剤強粘/ホリラミ上質",p:487},{name:"FNGツヤ50 PA-T1 11BL 溶剤強粘/ホリラミ上質",p:564},{name:"FNGケシ25 PA-T1 11BL 溶剤強粘/ホリラミ上質",p:504},{name:"FNGケシ50 PA-T1 11BL 溶剤強粘/ホリラミ上質",p:662}]},
   {maker:"東日本加工紙",g:"ホイル紙",items:[{name:"Sツヤ PW 8R 一般強粘/上質黄",p:217},{name:"Sケシ PW 8E 一般強粘/上質黄",p:217},{name:"Gツヤ PW 8E 一般強粘/上質黄",p:217},{name:"Gケシ PW 8E 一般強粘/上質黄",p:217},{name:"Sツヤ PZ2 8E 強粘/上質黄",p:230},{name:"Sケシ PZ2 8E 強粘/上質黄",p:230},{name:"Gツヤ PZ2 8E 強粘/上質黄",p:230},{name:"Gケシ PZ2 8E 強粘/上質黄",p:230},{name:"G P33 G7B金ツヤ 一般強粘/ブルーグラシン",p:217},{name:"GM P33 G7B金ケシ 一般強粘/ブルーグラシン",p:217}]},
   {maker:"東日本加工紙",g:"和紙",items:[{name:"ウンリュウ P62 L7C 強粘/PL上質黄",p:353},{name:"和紙白 水溶強粘 白グラシン",p:339},{name:"和紙無地 水溶強粘 白グラシン",p:339},{name:"和紙きり 水溶強粘 白グラシン",p:339}]},
-  {maker:"東日本加工紙",g:"ラミ用",items:[{name:"PPC20 OPL10 GW64 溶剤強粘/シログラシン",p:144},{name:"LPET16 OPL10 GW64 溶剤強粘/シログラシン",p:167},{name:"BW0100D マットPP エマルジョン/白",p:178},{name:"OPP#20 マット 44W 溶剤強粘/シログラシン",p:289},{name:"塩ビ乳白 PVC80B P 11Kシロ(ツヤ) 溶剤強粘/ホリラミシロ上質",p:408},{name:"塩ビ乳白 PVC80M P 11Kシロ(ケシ) 溶剤強粘/ホリラミシロ上質",p:408}]},
   {maker:"東日本加工紙",g:"エリエールタック（直送）上質",items:[{name:"上質S55 一般強粘 黄セパ",p:90},{name:"上質S55 一般強粘 SBG85S",p:90},{name:"上質S55 最強 黄セパ",p:103},{name:"上質S55 最強 SBG85",p:103},{name:"上質S55 冷食 SBG85S",p:103},{name:"上質S55 再剥離弱粘 黄セパ",p:141},{name:"上質S55 再剥離弱粘 SBG85S",p:141},{name:"上質S55 再剥離強粘 黄セパ",p:141},{name:"上質S55 再剥離強粘 SBG85S",p:141},{name:"上質S55 一般強粘 JP81PL 一般/上質白",p:117},{name:"上質S70 一般強粘 黄セパ",p:96},{name:"上質S70 一般強粘 SBG85S",p:96},{name:"上質S70 最強 黄セパ",p:122},{name:"上質S70 最強 SBG85S",p:122},{name:"上質S70 再剥離弱粘 黄セパ",p:170},{name:"上質S70 再剥離弱粘 SBG85S",p:170},{name:"上質S90 一般強粘 SBG85S",p:135},{name:"上質S90 最強粘 黄セパ",p:145}]},
   {maker:"東日本加工紙",g:"エリエールタック（直送）アート",items:[{name:"アート73 一般強粘 黄セパ",p:113},{name:"アート73 一般強粘 黄セパ 285幅男爵ポテト用",p:106},{name:"アート73 一般強粘 SBG85S",p:113},{name:"アート73 最強 黄セパ",p:128},{name:"アート73 最強 SBG85S",p:128},{name:"アート73 冷食 SBG85S",p:128},{name:"アート73 再剥離弱粘 黄セパ",p:159},{name:"アート73 再剥離弱粘 SBG85S",p:159},{name:"アート73 再剥離強粘 黄セパ",p:159},{name:"アート73 再剥離強粘 SBG85S",p:159},{name:"アート73 一般強粘 JP81PL 一般/上質白",p:130},{name:"アート90 一般強粘 SBG85S",p:168},{name:"アート135 最強粘 黄セパ",p:212}]},
   {maker:"東日本加工紙",g:"エリエールタック（直送）キャスト",items:[{name:"キャスト62 一般強粘 SBG85S",p:109},{name:"キャスト73 一般強粘 黄セパ",p:109},{name:"キャスト73 一般強粘 SBG85S",p:109},{name:"キャスト73 最強 黄セパ",p:123},{name:"キャスト73 最強 SBG85S",p:123},{name:"キャスト73 冷食 黄セパ",p:109},{name:"キャスト73 冷食 SBG85S",p:109},{name:"キャスト73 再剥離弱粘 黄セパ",p:159},{name:"キャスト73 再剥離弱粘 SBG85S",p:159},{name:"キャスト73 再剥離強粘 黄セパ",p:159},{name:"キャスト73 再剥離強粘 SBG85S",p:159},{name:"キャスト73 一般強粘 JP81PL",p:130}]},
@@ -2159,12 +2086,9 @@ const PAPER_MASTER=[
   ]},
 ];
 const LAMI_MASTER=[
-  {name:"OPP#20 ラミ用 白GS",p:104},{name:"OPP#20 エマルジョン 白GS",p:103},
-  {name:"PET#16 ラミ用 白GS",p:130},{name:"PET#16 ラミ用 透明セパ",p:138},
-  {name:"ラミ用PET#25 ラミ用 白GS",p:245},{name:"ラミ用PET#50 ラミ用 透明セパ",p:269},
-  {name:"マットOPP ラミ用 白GS",p:210},{name:"マットPETサンド ラミ用 白GS",p:317},
-  {name:"マットPET繰込 ラミ用 白GS",p:323},{name:"エンボスラミ ラミ用 白GS",p:375},
-  {name:"シリコンラミ ラミ用 白GS",p:265},{name:"ベルベットラミ ラミ用 白GS",p:402},{name:"抗菌OPP#20 ラミ用 白GS",p:284},
+  {maker:"マルウ接着",items:[{name:"OPP#20 ラミ用 白GS",p:125},{name:"OPP#20 ラミ用 透明セパ",p:142},{name:"OPP#20 エマルジョン 白GS",p:124},{name:"PET#16 ラミ用 白GS",p:156},{name:"PET#16 ラミ用 透明セパ",p:166},{name:"ラミ用PET#25 白GS",p:294},{name:"ラミ用PET#50 透明セパ",p:323},{name:"マットOPP ラミ用 白GS",p:252},{name:"OPP#40 ラミ用 白GS",p:240},{name:"マットPETサンド ラミ用 白GS",p:381},{name:"マットPET練込 ラミ用 白GS",p:388},{name:"エンボスラミ ラミ用 白GS",p:450},{name:"印字用PET16 ラミ用 白GS",p:302},{name:"サンカットラミ ラミ用 白GS",p:404},{name:"マットサンカット ラミ用 白GS",p:543},{name:"シリコンラミ ラミ用 白GS",p:318},{name:"シリコンラミ 白GS(巾フリー)",p:426},{name:"ベルベットラミ ラミ用 白GS",p:483},{name:"抗菌OPP#20 ラミ用 白GS",p:341}]},
+  {maker:"東京タック",items:[{name:"PET16 PLシン KG7W",p:161},{name:"PETSマット25 PLシン 8LKアオ",p:320},{name:"PETNマット25 PLシン 7LK",p:313},{name:"OPP20 PP-20 PLシン 6SK",p:152},{name:"OPPマット25 PPマット25N PLシン 6SK",p:274},{name:"フジクリア50 PLシン PET2501",p:461},{name:"PP40 PLシン 6SK",p:234}]},
+  {maker:"東日本加工紙",items:[{name:"PPC20 OPL10 GW64 溶剤強粘/シログラシン",p:144},{name:"LPET16 OPL10 GW64 溶剤強粘/シログラシン",p:167},{name:"BW0100D マットPP エマルジョン/白",p:178},{name:"OPP#20 マット 44W 溶剤強粘/シログラシン",p:289},{name:"塩ビ乳白 PVC80B 溶剤強粘/ホリラミシロ(ツヤ)",p:408},{name:"塩ビ乳白 PVC80M 溶剤強粘/ホリラミシロ(ケシ)",p:408}]},
 ];
 // 印刷単価テーブル [1000通し〜20000通し 1000刻み]
 const CS_TBL={1:[11000,12650,14300,15950,17600,19250,20900,22550,24200,25850,27500,29150,30800,32450,34100,35750,37400,39050,40700,38500],2:[12650,14300,15950,17600,19250,20900,22550,24200,25850,27500,29150,30800,32450,34100,35750,37400,39050,40700,42350,40000],3:[14300,15950,17600,19250,20900,22550,24200,25850,27500,29150,30800,32450,34100,35750,37400,39050,40700,42350,44000,41500],4:[16500,18150,19900,21450,23100,24750,26400,28050,29700,31350,33000,34650,36300,37950,39600,41250,42900,44550,46200,43500]};
@@ -2191,8 +2115,7 @@ const yen=n=>n===0?'¥0':'¥'+Math.round(n).toLocaleString();
 window.onload=function(){
   // メーカー選択UIがあるのでwindow.onloadではpaper_selectを空にしておく
   // onMakerChangeで動的に生成する
-  const ls=$('lami_select');
-  LAMI_MASTER.forEach(i=>{const o=document.createElement('option');o.value=i.p;o.textContent=i.name+'　'+i.p+'円/m²';ls.appendChild(o);});
+  // ラミはメーカー選択式のため onLamiMakerChange で生成
   renderLots();
   calc();
 };
@@ -3792,7 +3715,8 @@ function saveToHistory(){
   };
   history.unshift(snap);
   if(history.length>100) history.pop();
-  try{localStorage.setItem(TOTSU_HISTORY_KEY, JSON.stringify(history));}catch(e){}
+  try{try{localStorage.setItem(TOTSU_HISTORY_KEY, JSON.stringify(history));}catch(e){}
+  const _row=T_buildSheetRow(); if(_row) sendToSheet(_row);}catch(e){}
   alert('履歴に保存しました');
 }
 
@@ -3946,6 +3870,101 @@ function D_onMakerChange(){
     });
   });
 })();
+
+// ===== Googleスプレッドシート連携 =====
+const GAS_URL = ''; // ★ここにApps ScriptのウェブアプリURLを貼る
+
+function sendToSheet(payload){
+  if(!GAS_URL){ console.warn('GAS_URL未設定'); return; }
+  // no-corsで投げっぱなし送信(GAS側で受ける)
+  fetch(GAS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(payload)
+  }).then(()=>console.log('スプシ送信完了')).catch(e=>console.error('スプシ送信失敗',e));
+}
+
+// デジタル用: スナップショットからスプシ用データを組み立て
+function D_buildSheetRow(){
+  const snap = D_buildSnapshot();
+  if(!snap) return null;
+  const staff = (D$('d-staff')&&D$('d-staff').value)||'';
+  if(!staff){ alert('担当者を選択してください'); return null; }
+  // 先頭有効ロット
+  const qty = D_lots.find(q=>q>0)||0;
+  const r = qty>0 ? D_calcLotResult(qty) : null;
+  return {
+    staff,
+    method:'デジタル',
+    title: snap.title||'',
+    size: snap.W+'×'+snap.H,
+    material: snap.matName||'',
+    qty: qty,
+    subtotal: r? r.sell : '',
+    die: r? r.dieCost : '',
+    total: r? (r.sell + r.dieCost) : '',
+    unit: r? (r.sell/qty).toFixed(2) : '',
+    genka: (D$('d-v-genka-rate')&&D$('d-v-genka-rate').textContent)||''
+  };
+}
+
+// 凸版用
+function T_buildSheetRow(){
+  const w=$('W').value, h=$('H').value;
+  if(!w||!h){ return null; }
+  const staff = ($('t-staff')&&$('t-staff').value)||'';
+  if(!staff){ alert('担当者を選択してください'); return null; }
+  const shot = lots.find(q=>q>0)||0;
+  let subtotal='',die='',total='',unit='';
+  if(shot>0){
+    const selW=S.selMenW||0, selH=S.selMenH||0;
+    const {mW,mH}=(selW>0&&selH>0)?{mW:selW,mH:selH}:findBestMen(shot);
+    const r=calcOneLot(shot,mW,mH);
+    if(r){
+      subtotal=r.total;
+      const initCost=(S.hanopt==='新版'?r.hanDai:0)+(S.hagata==='新型'?r.hagataDai:0);
+      die=initCost; total=r.total+initCost; unit=(r.total/shot).toFixed(2);
+    }
+  }
+  return {
+    staff, method:'凸版',
+    title:($('hinmei').value||''),
+    size:w+'×'+h,
+    material:($('paper_select').options[$('paper_select').selectedIndex]||{}).text||'',
+    qty:shot, subtotal, die, total, unit,
+    genka:($('v-genka-rate')&&$('v-genka-rate').textContent)||''
+  };
+}
+
+// ===== ラミネート メーカー→品名 2段選択 =====
+function onLamiMakerChange(){
+  const maker=$('lami_maker').value;
+  const ls=$('lami_select');
+  ls.innerHTML='<option value="0">なし</option>';
+  if(!maker){ syncCustom('lami_select','lami_manual'); calc(); return; }
+  const grp=LAMI_MASTER.filter(g=>g.maker===maker);
+  grp.forEach(g=>g.items.forEach(i=>{
+    const o=document.createElement('option');
+    o.value=i.p; o.textContent=i.name+'　'+i.p+'円/m²';
+    ls.appendChild(o);
+  }));
+  calc();
+}
+function D_onLamiMakerChange(){
+  const maker=D$('d-lami-maker').value;
+  const ls=D$('laminate');
+  ls.innerHTML='<option value="0">なし</option>';
+  if(!maker){ D_calc(); return; }
+  const grp=LAMI_MASTER.filter(g=>g.maker===maker);
+  grp.forEach(g=>g.items.forEach(i=>{
+    const o=document.createElement('option');
+    o.value=i.p; o.setAttribute('data-n',i.name);
+    o.textContent=i.name+'　'+i.p+'円/m²';
+    ls.appendChild(o);
+  }));
+  D_calc();
+}
 
 // ===== アプリ切り替え =====
 function switchApp(mode){
