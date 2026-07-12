@@ -1078,6 +1078,8 @@ input[type=range]{
             <div style="font-size:14px;font-weight:700;color:var(--title1);margin-bottom:4px">凸版印刷</div>
             <div style="font-size:11px;color:var(--ink3)">CS / ミニ / FUSION</div>
           </button>
+      <div style="grid-column:1/-1;text-align:center;font-size:10px;color:#666;margin-top:14px">価格表: マルウ2026/7/1｜新タック2026/6/9｜東日本2026/6/24｜丸昌2026/7/1｜東京タック2026/7/1</div>
+      <div id="cmp-area" style="grid-column:1/-1"></div>
         </div>
       </div>
     </div>
@@ -1092,6 +1094,10 @@ input[type=range]{
 <div class="sec">
   <div class="sh"><span class="sn">01</span><span class="st">サイズ・数量・デザイン数</span></div>
   <div class="sb">
+    <div class="fg">
+      <label>得意先社名</label>
+      <input type="text" id="d-customer" placeholder="例：〇〇商事" maxlength="40">
+    </div>
     <div class="fg">
       <label>品名・案件名（任意・履歴で見分けやすくなります）</label>
       <input type="text" id="quote-title" placeholder="例：〇〇商事様 ラベルA" maxlength="60">
@@ -1602,6 +1608,7 @@ input[type=range]{
   <div class="btn-area">
     <button class="btn-print" onclick="if(D_saveCurrentToHistory()){const row=D_buildSheetRow();if(row)sendToSheet(row);alert('履歴に保存しました');}" style="background:#fffacc;">💾 この見積もりを履歴に保存</button>
     <button class="btn-print" onclick="D_openSubmissionPrompt()" style="background:#d4f4dd;">📜 提出用見積書を作成</button>
+    <button class="btn-print" onclick="copyForExcel('digital')" style="background:#dce8ff;">📋 Excel台帳にコピー</button>
     <button class="btn-print" onclick="D_openQuoteWindow()">📄 見積もり結果を別窓で表示</button>
     <button class="btn-print" onclick="window.print()">🖨 見積もりを印刷</button>
     <button class="btn-print" onclick="D_openHistoryWindow()">📂 保存履歴を見る</button>
@@ -1625,6 +1632,10 @@ input[type=range]{
 <div class="sec">
   <div class="sh"><span class="sn">01</span><span class="st">品名・サイズ・印刷仕様</span></div>
   <div class="sb">
+    <div class="fg">
+      <label>得意先社名</label>
+      <input type="text" id="t-customer" placeholder="例：〇〇商事" maxlength="40">
+    </div>
     <div class="fg">
       <label>品名・案件名（任意）</label>
       <input type="text" id="hinmei" placeholder="例：○○商様 ラベルA" maxlength="60">
@@ -1746,6 +1757,8 @@ input[type=range]{
       </select></div>
     </div>
     <div class="fg"><label>ラミ単価 直接入力（円/m²）※入力で選択値を上書き</label><input type="number" id="lami_manual" placeholder="例: 130" oninput="calc()"></div>
+    <div class="fg"><label>特別加工費（固定・円）</label><input type="number" id="extra_fixed" placeholder="例: 5000" min="0" oninput="calc()"></div>
+    <div class="fg"><label>特別加工費（1枚あたり・円）</label><input type="number" id="extra_unit" placeholder="例: 2" min="0" step="0.01" oninput="calc()"></div>
   </div>
 </div>
 
@@ -1990,6 +2003,7 @@ input[type=range]{
 
   <div class="btn-area">
     <button class="btn-print" onclick="saveToHistory()" style="background:#fffacc;">💾 この見積もりを履歴に保存</button>
+    <button class="btn-print" onclick="copyForExcel('totsu')" style="background:#dce8ff;">📋 Excel台帳にコピー</button>
     <button class="btn-print" onclick="openSubmissionPrompt()" style="background:#d4f4dd;">📜 提出用見積書を作成</button>
     <button class="btn-print" onclick="openQuoteWindow()">📄 見積もり結果を別窓で表示</button>
     <button class="btn-print" onclick="window.print()">🖨 見積もりを印刷</button>
@@ -2524,6 +2538,7 @@ function updateSidebar(){
       const hakuCost=$('haku_chk').checked?(r.hakuZairyoHi||0)+(r.hakuKochiHi||0)+(S.hakuhan==='新版'?r.hakuHanDai||0:0):0;
       set('v-die-inline',(S.hanopt==='新版'?'版代'+yen(r.hanDai)+' ':'')+(S.hagata==='新型'?'刃型'+yen(r.hagataDai):'（再版・再型）'));
       set('v-grand-total',yen(r.total+initCost+hakuCost));
+      try{saveCmp('totsu',w+'×'+h,shot,Math.round(r.total+initCost+hakuCost));}catch(e){}
       return;
     }
   }
@@ -2695,6 +2710,7 @@ function openQuoteWindow(){
 }
 
 function resetAll(){
+  try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){}
   $('hinmei').value='';$('W').value='';$('H').value='';$('designs').value='1';
   $('machine').value='auto';$('ink_count').value='1';
   $('paper_select').value='0';$('paper_manual').value='';if($('extra_fixed'))$('extra_fixed').value='';if($('extra_unit'))$('extra_unit').value='';$('yobi_m').value='';$('sheet_men').value='';$('sheet_size_limit').value='';
@@ -2972,6 +2988,12 @@ function D_buildSnapshot(){
   });
 
   return {
+    // 復元用生値
+    raw:{W:D$('d-W').value,H:D$('d-H').value,designs:D$('d-designs').value,margin:D$('margin').value,
+      lots:[...D_lots],maker:(D$('d-maker')||{}).value||'',matVal:D$('material').value,matCustom:D$('mat-custom').value,
+      lamiMaker:(D$('d-lami-maker')||{}).value||'',lamiVal:D$('laminate').value,lamiCustom:D$('lami-custom').value,
+      staff:(D$('d-staff')||{}).value||'',exF:(D$('d-extra-fixed')||{}).value||'',exU:(D$('d-extra-unit')||{}).value||'',
+      S:{...D_S}},
     id: Date.now(),
     savedAt: new Date().toISOString(),
     title: (D$('quote-title').value||'').trim(),
@@ -3150,12 +3172,14 @@ function D_openHistoryWindow(){
     '<th style="padding:6px 8px;text-align:left">品名</th>'+
     '<th style="padding:6px 8px">サイズ</th>'+
     '<th style="padding:6px 8px">売価</th>'+
+    '<th style="padding:6px 8px">操作</th>'+
     '</tr></thead><tbody>'+
     list.map(h=>`<tr style="border-bottom:1px dotted #ccc">
       <td style="padding:5px 8px">${h.date||''}</td>
       <td style="padding:5px 8px">${h.title||h.hinmei||'—'}</td>
-      <td style="padding:5px 8px;text-align:center">${h.W}×${h.H}mm</td>
-      <td style="padding:5px 8px;text-align:right;font-weight:700;color:#000080">${h.sellDisp||h.sell||'—'}</td>
+      <td style="padding:5px 8px;text-align:center">${(h.raw?h.raw.W+'×'+h.raw.H:'—')}mm</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700;color:#000080">${h.grandTotal||h.subtotal||'—'}</td>
+      <td style="padding:5px 8px;text-align:center">${h.raw?`<button onclick="D_restoreFromHistory(${h.id})" style="font-size:11px;padding:2px 8px;cursor:pointer">↩復元</button>`:'—'}</td>
     </tr>`).join('')+
     '</tbody></table>';
   document.getElementById('d-det-modal-title').textContent='📂 保存履歴（デジタル印刷）';
@@ -3487,6 +3511,7 @@ function D_updateMargin(){
 }
 
 function D_resetAll(){
+  try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){}
   D$('d-W').value='';D$('d-H').value='';D$('d-designs').value='';
   D$('quote-title').value='';
   D$('material').selectedIndex=0;D$('laminate').selectedIndex=0;
@@ -3702,6 +3727,12 @@ function saveToHistory(){
   if(!w||!h){alert('サイズを入力してください');return;}
   let history=[]; try{history=JSON.parse(localStorage.getItem(TOTSU_HISTORY_KEY)||'[]');}catch(e){}
   const snap = {
+    raw:{W:w,H:h,hinmei:$('hinmei').value||'',staff:($('t-staff')||{}).value||'',
+      designs:($('designs')||{}).value||'',colors:($('ink_count')||{}).value||'',
+      paperMaker:($('paper_maker')||{}).value||'',paperVal:$('paper_select').value,paperManual:$('paper_manual').value,
+      lamiMaker:($('lami_maker')||{}).value||'',lamiVal:$('lami_select').value,lamiManual:$('lami_manual').value,
+      exF:($('extra_fixed')||{}).value||'',exU:($('extra_unit')||{}).value||'',
+      lots:[...lots],S:{...S}},
     id: Date.now(),
     date: new Date().toLocaleDateString('ja-JP'),
     hinmei: $('hinmei').value||'',
@@ -3742,6 +3773,7 @@ function openHistoryWindow(){
       <td style="padding:5px 8px;text-align:center">${h.inktype} ${h.colors}色</td>
       <td style="padding:5px 8px;text-align:right">${h.sell}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700;color:#000080">${h.grand}</td>
+      <td style="padding:5px 8px;text-align:center">${h.raw?`<button onclick="T_restoreFromHistory(${h.id})" style="font-size:11px;padding:2px 8px;cursor:pointer">↩復元</button>`:'—'}</td>
     </tr>`).join('') +
     '</tbody></table>';
   set('det-modal-title','📂 保存履歴（凸版印刷）');
@@ -3815,7 +3847,7 @@ function onMakerChange(){
     og.label='─ '+g.g+' ─';
     g.items.forEach(i=>{
       const o=document.createElement('option');
-      o.value=i.p;o.textContent=i.name+'　'+i.p+'円/m²';
+      o.value=i.p;o.textContent=i.name+(i.p>0?'　'+i.p+'円/m²':'　⚠要問合せ');
       og.appendChild(o);
     });
     ps.appendChild(og);
@@ -3843,7 +3875,7 @@ function D_onMakerChange(){
       const o=document.createElement('option');
       o.value=i.p;
       o.setAttribute('data-n',i.name);
-      o.textContent=i.name+'　'+i.p+'円/m²';
+      o.textContent=i.name+(i.p>0?'　'+i.p+'円/m²':'　⚠要問合せ');
       og.appendChild(o);
     });
     ms.appendChild(og);
@@ -3905,7 +3937,7 @@ function D_buildSheetRow(){
     die: r? r.dieCost : '',
     total: r? (r.sell + r.dieCost) : '',
     unit: r? (r.sell/qty).toFixed(2) : '',
-    genka: (D$('d-v-genka-rate')&&D$('d-v-genka-rate').textContent)||''
+    genka: (D$('v-genka-rate')&&D$('v-genka-rate').textContent)||''
   };
 }
 
@@ -3946,7 +3978,7 @@ function onLamiMakerChange(){
   const grp=LAMI_MASTER.filter(g=>g.maker===maker);
   grp.forEach(g=>g.items.forEach(i=>{
     const o=document.createElement('option');
-    o.value=i.p; o.textContent=i.name+'　'+i.p+'円/m²';
+    o.value=i.p; o.textContent=i.name+(i.p>0?'　'+i.p+'円/m²':'　⚠要問合せ');
     ls.appendChild(o);
   }));
   calc();
@@ -3960,13 +3992,210 @@ function D_onLamiMakerChange(){
   grp.forEach(g=>g.items.forEach(i=>{
     const o=document.createElement('option');
     o.value=i.p; o.setAttribute('data-n',i.name);
-    o.textContent=i.name+'　'+i.p+'円/m²';
+    o.textContent=i.name+(i.p>0?'　'+i.p+'円/m²':'　⚠要問合せ');
     ls.appendChild(o);
   }));
   D_calc();
 }
 
-// ===== アプリ切り替え =====
+// ===== ① 入力の自動保存・復元 =====
+const AUTOSAVE_KEY='kamu_autosave_v1';
+const AUTOSAVE_IDS=['d-W','d-H','d-designs','quote-title','d-customer','d-staff','d-maker','material','mat-custom','d-lami-maker','laminate','lami-custom','margin','d-extra-fixed','d-extra-unit',
+ 'W','H','hinmei','t-customer','t-staff','designs','irokae_count','ink_count','paper_maker','paper_select','lami_maker','lami_select','paper_manual','lami_manual','extra_fixed','extra_unit',
+ 'd-lot0','d-lot1','d-lot2','d-lot3','d-lot4','d-lot5','lot0','lot1','lot2','lot3','lot4','lot5'];
+function autoSave(){
+  try{
+    const o={};
+    AUTOSAVE_IDS.forEach(id=>{const el=document.getElementById(id);if(el&&el.value!=='')o[id]=el.value;});
+    localStorage.setItem(AUTOSAVE_KEY,JSON.stringify(o));
+  }catch(e){}
+}
+function autoRestore(){
+  try{
+    const o=JSON.parse(localStorage.getItem(AUTOSAVE_KEY)||'{}');
+    // メーカーを先に復元して品名リストを生成
+    ['paper_maker','lami_maker','d-maker','d-lami-maker'].forEach(id=>{
+      if(o[id]){const el=document.getElementById(id);if(el){el.value=o[id];}}
+    });
+    if(o['paper_maker']&&typeof onMakerChange==='function')onMakerChange();
+    if(o['lami_maker']&&typeof onLamiMakerChange==='function')onLamiMakerChange();
+    if(o['d-maker']&&typeof D_onMakerChange==='function')D_onMakerChange();
+    if(o['d-lami-maker']&&typeof D_onLamiMakerChange==='function')D_onLamiMakerChange();
+    // 残りを復元
+    AUTOSAVE_IDS.forEach(id=>{
+      if(o[id]===undefined)return;
+      const el=document.getElementById(id);if(!el)return;
+      el.value=o[id];
+      // D_lots/lots同期
+      const m=id.match(/^d-lot(\d)$/); if(m&&typeof D_lots!=='undefined')D_lots[+m[1]]=parseInt(o[id])||0;
+      const m2=id.match(/^lot(\d)$/); if(m2&&typeof lots!=='undefined')lots[+m2[1]]=parseInt(o[id])||0;
+    });
+    if(typeof calc==='function')calc();
+    if(typeof D_calc==='function')D_calc();
+  }catch(e){}
+}
+// 変更時に自動保存(委譲)
+document.addEventListener('input',e=>{if(e.target&&AUTOSAVE_IDS.includes(e.target.id))autoSave();});
+document.addEventListener('change',e=>{if(e.target&&AUTOSAVE_IDS.includes(e.target.id))autoSave();});
+window.addEventListener('load',()=>setTimeout(()=>{autoRestore();renderCmp();},200));
+
+// ===== ④ 凸/デジタル 同条件比較 =====
+function saveCmp(kind,size,qty,total){
+  try{
+    const o=JSON.parse(localStorage.getItem('kamu_cmp')||'{}');
+    o[kind]={size,qty,total,at:Date.now()};
+    localStorage.setItem('kamu_cmp',JSON.stringify(o));
+  }catch(e){}
+}
+function renderCmp(){
+  const el=document.getElementById('cmp-area'); if(!el)return;
+  let o={}; try{o=JSON.parse(localStorage.getItem('kamu_cmp')||'{}');}catch(e){}
+  const d=o.digital,t=o.totsu;
+  if(!d&&!t){el.innerHTML='';return;}
+  const same=d&&t&&d.size===t.size&&d.qty===t.qty;
+  let html='<div style="margin-top:14px;padding:8px;border:1px solid #999;background:#fff;font-size:11px;text-align:left">';
+  html+='<b>直近の見積比較</b>'+(same?'（同条件）':'（条件が異なります）')+'<br>';
+  if(d)html+='デジタル: '+d.size+'mm × '+d.qty.toLocaleString()+'枚 → <b>¥'+d.total.toLocaleString()+'</b>';
+  if(d&&t&&same&&d.total<t.total)html+=' <span style="color:#080;font-weight:700">◀安い</span>';
+  html+='<br>';
+  if(t)html+='凸版　　: '+t.size+'mm × '+t.qty.toLocaleString()+'枚 → <b>¥'+t.total.toLocaleString()+'</b>';
+  if(d&&t&&same&&t.total<=d.total)html+=' <span style="color:#080;font-weight:700">◀安い</span>';
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// ===== ⑤ 履歴から復元 =====
+function D_restoreFromHistory(id){
+  const item=D_getHistory().find(x=>x.id===id);
+  if(!item||!item.raw){alert('この履歴は復元に対応していません(新形式で保存し直すと復元可能)');return;}
+  const r=item.raw;
+  D$('d-W').value=r.W; D$('d-H').value=r.H; D$('d-designs').value=r.designs||'';
+  D$('margin').value=r.margin||0; if(typeof D_updateMargin==='function')D_updateMargin();
+  if(D$('d-staff'))D$('d-staff').value=r.staff||'';
+  if(D$('d-extra-fixed'))D$('d-extra-fixed').value=r.exF||'';
+  if(D$('d-extra-unit'))D$('d-extra-unit').value=r.exU||'';
+  if(r.S)Object.assign(D_S,r.S);
+  if(D$('d-maker')){D$('d-maker').value=r.maker||'';D_onMakerChange();}
+  D$('material').value=r.matVal||'0'; D$('mat-custom').value=r.matCustom||'';
+  if(D$('d-lami-maker')){D$('d-lami-maker').value=r.lamiMaker||'';D_onLamiMakerChange();}
+  D$('laminate').value=r.lamiVal||'0'; D$('lami-custom').value=r.lamiCustom||'';
+  D_lots=(r.lots||[0,0,0,0,0,0]).map(x=>parseInt(x)||0);
+  for(let i=0;i<6;i++){const el=D$('d-lot'+i);if(el)el.value=D_lots[i]||'';const sp=D$('d-sp-lot'+i);if(sp)sp.value=D_lots[i]||'';}
+  D_calc(); D_closeDetModal();
+  alert('履歴を復元しました');
+}
+function T_restoreFromHistory(id){
+  let hist=[]; try{hist=JSON.parse(localStorage.getItem(TOTSU_HISTORY_KEY)||'[]');}catch(e){}
+  const item=hist.find(x=>x.id===id);
+  if(!item||!item.raw){alert('この履歴は復元に対応していません(新形式で保存し直すと復元可能)');return;}
+  const r=item.raw;
+  $('W').value=r.W; $('H').value=r.H; $('hinmei').value=r.hinmei||'';
+  if($('t-staff'))$('t-staff').value=r.staff||'';
+  if($('designs'))$('designs').value=r.designs||'';
+  if($('ink_count'))$('ink_count').value=r.colors||'';
+  if(r.S)Object.assign(S,r.S);
+  if($('paper_maker')){$('paper_maker').value=r.paperMaker||'';onMakerChange();}
+  $('paper_select').value=r.paperVal||'0'; $('paper_manual').value=r.paperManual||'';
+  if($('lami_maker')){$('lami_maker').value=r.lamiMaker||'';onLamiMakerChange();}
+  $('lami_select').value=r.lamiVal||'0'; $('lami_manual').value=r.lamiManual||'';
+  if($('extra_fixed'))$('extra_fixed').value=r.exF||'';
+  if($('extra_unit'))$('extra_unit').value=r.exU||'';
+  lots=(r.lots||[0,0,0,0,0,0]).map(x=>parseInt(x)||0);
+  for(let i=0;i<6;i++){const el=$('lot'+i);if(el)el.value=lots[i]||'';}
+  calc(); closeDetModal();
+  alert('履歴を復元しました');
+}
+
+// ===== ④ Excel台帳へコピー(方法A) =====
+// 既存台帳の59列に合わせてTSV1行を生成しクリップボードへ
+function copyForExcel(kind){
+  try{
+    // ★B列(見積日)以降に貼付。番号(A列)は含めない。
+    // 0見積日 1得意先 2担当 3品名 4寸法 5色数 6材質 7加工 8仕様
+    // 9-14(K-P:A-F)空 15-20数量 21-26単位 27-32単価 33-38小計
+    // 39-44版下 45-50版 51-56刃型 57-62合計 63備考
+    const cols=new Array(64).fill('');
+    const t=new Date();
+    cols[0]=`${t.getFullYear()}/${t.getMonth()+1}/${t.getDate()}`;
+    if(kind==='digital'){
+      const W=D$('d-W').value,H=D$('d-H').value;
+      cols[1]=(D$('d-customer')&&D$('d-customer').value)||'';
+      cols[2]=(D$('d-staff')&&D$('d-staff').value)||'';
+      cols[3]=(D$('quote-title')&&D$('quote-title').value)||'';
+      cols[4]=W&&H?`${W}×${H}`:'';
+      cols[5]='デジタル';
+      const matSel=D$('material');
+      const matName=D$('mat-custom').value!==''?`リスト外(${D$('mat-custom').value})`:((matSel.options[matSel.selectedIndex]||{}).dataset?.n||'');
+      // 材質(cols[6]=H列): 素材名+ラミ略称+箔
+      const lamiSel=D$('laminate');
+      const lamiOpt=lamiSel.options[lamiSel.selectedIndex]||{};
+      const lamiName=D$('lami-custom').value!==''?'ラミ':(lamiOpt.getAttribute?(lamiOpt.getAttribute('data-n')||''):'');
+      let lamiAbbr='';
+      if(lamiName){const mm=lamiName.match(/OPP|PET|PP|マット|ホロ|塩ビ|フジクリア/);lamiAbbr=mm?mm[0]:'ラミ';}
+      cols[6]=matName+(lamiAbbr?'+'+lamiAbbr:'')+(D_S.foil==='yes'?' 箔':'');
+      // 加工(cols[7]=I列): 空欄
+      cols[7]='';
+      // 仕様(cols[8]=J列): シート/ロール
+      cols[8]=(D_S.finish==='roll'?'ロール':D_S.finish==='allcut'?'全抜き':'シート');
+      D_lots.forEach((qty,k)=>{
+        if(qty<=0)return;
+        const r=D_calcLotResult(qty);
+        if(!r)return;
+        cols[15+k]=qty;                    // 数量
+        cols[21+k]='枚';                   // 単位
+        cols[27+k]=Math.round(r.sell/qty); // 単価=小計÷数量
+        cols[33+k]=r.sell;                 // 小計(刃型抜き)
+        cols[51+k]=r.dieCost||'';          // 刃型
+        cols[57+k]=r.sell+(r.dieCost||0);  // 合計
+      });
+    } else {
+      const w=$('W').value,h=$('H').value;
+      cols[1]=($('t-customer')&&$('t-customer').value)||'';
+      cols[2]=($('t-staff')&&$('t-staff').value)||'';
+      cols[3]=($('hinmei')&&$('hinmei').value)||'';
+      cols[4]=w&&h?`${w}×${h}`:'';
+      cols[5]=(($('ink_count')&&$('ink_count').value)||'')+'c';
+      const ps=$('paper_select');
+      const pName=$('paper_manual').value!==''?`直接(${$('paper_manual').value})`:((ps.options[ps.selectedIndex]||{}).textContent||'').split('　')[0];
+      // 材質(H): 素材+ラミ略称
+      const lsel=$('lami_select');
+      const lname=$('lami_manual').value!==''?'ラミ':((lsel.options[lsel.selectedIndex]||{}).textContent||'').split('　')[0];
+      let labbr='';
+      if(lname&&lname!=='なし'){const mm=lname.match(/OPP|PET|PP|マット|ホロ|塩ビ|フジクリア/);labbr=mm?mm[0]:'ラミ';}
+      cols[6]=pName+(labbr?'+'+labbr:'');
+      // 加工(I): 空欄
+      cols[7]='';
+      // 仕様: シート/ロール(凸版のS.shiage)
+      cols[8]=S.shiage||'';
+      lots.forEach((shot,k)=>{
+        if(shot<=0)return;
+        const selW=S.selMenW||0,selH=S.selMenH||0;
+        const {mW,mH}=(selW>0&&selH>0)?{mW:selW,mH:selH}:findBestMen(shot);
+        const r=calcOneLot(shot,mW,mH);
+        if(!r)return;
+        const initCost=(S.hanopt==='新版'?r.hanDai:0)+(S.hagata==='新型'?r.hagataDai:0);
+        cols[15+k]=shot;
+        cols[21+k]='枚';
+        cols[27+k]=Math.round(r.total/shot);
+        cols[33+k]=Math.round(r.total);
+        cols[45+k]=(S.hanopt==='新版'?Math.round(r.hanDai):'');
+        cols[51+k]=(S.hagata==='新型'?Math.round(r.hagataDai):'');
+        cols[57+k]=Math.round(r.total+initCost);
+      });
+    }
+    const tsv=cols.join('\t');
+    const done=()=>alert('台帳貼付用データをコピーしました。\nExcelの【B列】(見積日)の空行を選んで貼り付け(Ctrl+V)してください。\n※A列の番号は手動で入れてください。');
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(tsv).then(done).catch(()=>{fallbackCopy(tsv);done();});
+    }else{ fallbackCopy(tsv); done(); }
+  }catch(e){alert('コピーに失敗: '+e.message);}
+}
+
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
+  ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);
+}
 function switchApp(mode){
   // 全モーダルを強制的に閉じる
   ['det-modal','d-det-modal'].forEach(id=>{const m=document.getElementById(id);if(m)m.classList.remove('show');});
@@ -3992,6 +4221,7 @@ function goTop(){
   document.getElementById('app-header').style.display='none';
   document.getElementById('digital-app').style.display='none';
   document.getElementById('totsu-app').style.display='none';
+  try{renderCmp();}catch(e){}
 }
 
 
