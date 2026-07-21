@@ -1606,12 +1606,10 @@ input[type=range]{
   </div>
 
   <div class="btn-area">
-    <button class="btn-print" onclick="if(D_saveCurrentToHistory()){const row=D_buildSheetRow();if(row)sendToSheet(row);alert('履歴に保存しました');}" style="background:#fffacc;">💾 この見積もりを履歴に保存</button>
-    <button class="btn-print" onclick="D_openSubmissionPrompt()" style="background:#d4f4dd;">📜 提出用見積書を作成</button>
     <button class="btn-print" onclick="copyForExcel('digital')" style="background:#dce8ff;">📋 Excel台帳にコピー</button>
+    <button class="btn-print" onclick="saveToSheet('digital')" style="background:#d4f4dd;">☁ スプレッドシートに保存</button>
     <button class="btn-print" onclick="D_openQuoteWindow()">📄 見積もり結果を別窓で表示</button>
     <button class="btn-print" onclick="window.print()">🖨 見積もりを印刷</button>
-    <button class="btn-print" onclick="D_openHistoryWindow()">📂 保存履歴を見る</button>
     <button class="btn-reset" onclick="D_resetAll()">リセット</button>
   </div>
 </div>
@@ -2002,12 +2000,10 @@ input[type=range]{
   </div>
 
   <div class="btn-area">
-    <button class="btn-print" onclick="saveToHistory()" style="background:#fffacc;">💾 この見積もりを履歴に保存</button>
     <button class="btn-print" onclick="copyForExcel('totsu')" style="background:#dce8ff;">📋 Excel台帳にコピー</button>
-    <button class="btn-print" onclick="openSubmissionPrompt()" style="background:#d4f4dd;">📜 提出用見積書を作成</button>
+    <button class="btn-print" onclick="saveToSheet('totsu')" style="background:#d4f4dd;">☁ スプレッドシートに保存</button>
     <button class="btn-print" onclick="openQuoteWindow()">📄 見積もり結果を別窓で表示</button>
     <button class="btn-print" onclick="window.print()">🖨 見積もりを印刷</button>
-    <button class="btn-print" onclick="openHistoryWindow()">📂 保存履歴を見る</button>
     <button class="btn-reset" onclick="resetAll()">リセット</button>
   </div>
 </div>
@@ -3904,7 +3900,7 @@ function D_onMakerChange(){
 })();
 
 // ===== Googleスプレッドシート連携 =====
-const GAS_URL = ''; // ★ここにApps ScriptのウェブアプリURLを貼る
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwjxexMk_3fdYu6FTK1xtiwzKMG-pLqCaocQh5BwB62bQ8f_a_R-7TwxHhW9R_sBLGV/exec'; // ★ここにApps ScriptのウェブアプリURLを貼る
 
 function sendToSheet(payload){
   if(!GAS_URL){ console.warn('GAS_URL未設定'); return; }
@@ -4196,6 +4192,69 @@ function fallbackCopy(text){
   ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);
   ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);
 }
+
+// ===== スプレッドシートに保存(担当者タブへ自動振り分け) =====
+const GAS_URL_SHEET = 'https://script.google.com/macros/s/AKfycbwjxexMk_3fdYu6FTK1xtiwzKMG-pLqCaocQh5BwB62bQ8f_a_R-7TwxHhW9R_sBLGV/exec'; // Apps Script ウェブアプリURL
+function buildRowArray(kind){
+  const cols=new Array(64).fill('');
+  const t=new Date();
+  cols[0]=`${t.getFullYear()}/${t.getMonth()+1}/${t.getDate()}`;
+  if(kind==='digital'){
+    const W=D$('d-W').value,H=D$('d-H').value;
+    cols[1]=(D$('d-customer')&&D$('d-customer').value)||'';
+    cols[2]=(D$('d-staff')&&D$('d-staff').value)||'';
+    cols[3]=(D$('quote-title')&&D$('quote-title').value)||'';
+    cols[4]=W&&H?`${W}×${H}`:'';
+    cols[5]='デジタル';
+    const matSel=D$('material');
+    const matName=D$('mat-custom').value!==''?`リスト外(${D$('mat-custom').value})`:((matSel.options[matSel.selectedIndex]||{}).dataset?.n||'');
+    const lamiSel=D$('laminate');const lamiOpt=lamiSel.options[lamiSel.selectedIndex]||{};
+    const lamiName=D$('lami-custom').value!==''?'ラミ':(lamiOpt.getAttribute?(lamiOpt.getAttribute('data-n')||''):'');
+    let lamiAbbr='';if(lamiName){const mm=lamiName.match(/OPP|PET|PP|マット|ホロ|塩ビ|フジクリア/);lamiAbbr=mm?mm[0]:'ラミ';}
+    cols[6]=matName+(lamiAbbr?'+'+lamiAbbr:'')+(D_S.foil==='yes'?' 箔':'');
+    cols[7]='';
+    cols[8]=(D_S.finish==='roll'?'ロール':D_S.finish==='allcut'?'全抜き':'シート');
+    D_lots.forEach((qty,k)=>{if(qty<=0)return;const r=D_calcLotResult(qty);if(!r)return;
+      cols[15+k]=qty;cols[21+k]='枚';cols[27+k]=Math.round(r.sell/qty);cols[33+k]=r.sell;
+      cols[51+k]=r.dieCost||'';cols[57+k]=r.sell+(r.dieCost||0);});
+  } else {
+    const w=$('W').value,h=$('H').value;
+    cols[1]=($('t-customer')&&$('t-customer').value)||'';
+    cols[2]=($('t-staff')&&$('t-staff').value)||'';
+    cols[3]=($('hinmei')&&$('hinmei').value)||'';
+    cols[4]=w&&h?`${w}×${h}`:'';
+    cols[5]=(($('ink_count')&&$('ink_count').value)||'')+'c';
+    const ps=$('paper_select');
+    const pName=$('paper_manual').value!==''?`直接(${$('paper_manual').value})`:((ps.options[ps.selectedIndex]||{}).textContent||'').split('　')[0];
+    const lsel=$('lami_select');
+    const lname=$('lami_manual').value!==''?'ラミ':((lsel.options[lsel.selectedIndex]||{}).textContent||'').split('　')[0];
+    let labbr='';if(lname&&lname!=='なし'){const mm=lname.match(/OPP|PET|PP|マット|ホロ|塩ビ|フジクリア/);labbr=mm?mm[0]:'ラミ';}
+    cols[6]=pName+(labbr?'+'+labbr:'');
+    cols[7]='';
+    cols[8]=S.shiage||'';
+    lots.forEach((shot,k)=>{if(shot<=0)return;
+      const selW=S.selMenW||0,selH=S.selMenH||0;const {mW,mH}=(selW>0&&selH>0)?{mW:selW,mH:selH}:findBestMen(shot);
+      const r=calcOneLot(shot,mW,mH);if(!r)return;
+      const initCost=(S.hanopt==='新版'?r.hanDai:0)+(S.hagata==='新型'?r.hagataDai:0);
+      cols[15+k]=shot;cols[21+k]='枚';cols[27+k]=Math.round(r.total/shot);cols[33+k]=Math.round(r.total);
+      cols[45+k]=(S.hanopt==='新版'?Math.round(r.hanDai):'');
+      cols[51+k]=(S.hagata==='新型'?Math.round(r.hagataDai):'');
+      cols[57+k]=Math.round(r.total+initCost);});
+  }
+  return cols;
+}
+function saveToSheet(kind){
+  const staff = kind==='digital' ? ((D$('d-staff')&&D$('d-staff').value)||'') : (($('t-staff')&&$('t-staff').value)||'');
+  if(!staff){ alert('担当者を選択してください'); return; }
+  const W = kind==='digital' ? D$('d-W').value : $('W').value;
+  const H = kind==='digital' ? D$('d-H').value : $('H').value;
+  if(!W||!H){ alert('サイズを入力してください'); return; }
+  if(!GAS_URL_SHEET){ alert('スプレッドシートの連携URLが未設定です。'); return; }
+  const row=buildRowArray(kind);
+  fetch(GAS_URL_SHEET,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({staff:staff,row:row})})
+    .then(()=>alert('「'+staff+'」のタブに保存しました')).catch(e=>alert('保存に失敗: '+e.message));
+}
+
 function switchApp(mode){
   // 全モーダルを強制的に閉じる
   ['det-modal','d-det-modal'].forEach(id=>{const m=document.getElementById(id);if(m)m.classList.remove('show');});
